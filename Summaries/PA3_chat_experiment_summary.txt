@@ -1,0 +1,362 @@
+PA3 CNN EXPERIMENT SUMMARY — THIS CHAT
+Status: October 25, 2026, America/Los_Angeles
+Current selection: run_19. Run_20 is reported running; no results reviewed yet.
+
+PURPOSE AND SCOPE
+
+This is a continuation of PA3_experiment_summary.txt, not a finished report.
+It records the evidence reviewed and experiments completed during this chat,
+with enough earlier context to connect the findings. The earlier summary
+stopped at an interrupted five-block experiment. The original ZIP already
+contained a completed replacement run (run_15), which superseded that next step.
+Use run_19 as the current selected configuration while writing the report.
+Revisit the selection when run_20 finishes; do not describe run_20 as successful
+or assign it metrics before its JSON is available.
+
+1. ASSIGNMENT AND EXPERIMENTAL PROTOCOL
+
+Research question: Under a fixed training budget, which CNN architecture and
+optimization choices improve ImageNet-100 validation accuracy, and why?
+
+Dataset: clane9/imagenet-100, pinned revision
+0519dc2f402a3a18c6e57f7913db059215eee25b.
+Training images: 126,689. Development-validation images: 5,000. Classes: 100.
+Input size: 128 x 128 RGB. Batch size: 64.
+Training transforms: RandomResizedCrop(128), random horizontal flip, tensor
+conversion, ImageNet mean/std normalization. Validation uses deterministic
+resize, center crop, tensor conversion, and the same normalization.
+
+Local hardware: NVIDIA GeForce RTX 5060 Ti; notebook reported PyTorch
+2.11.0+cu128 on Windows. The reviewed completed local runs use four loader
+workers. Sixteen workers were discussed but not used in these saved runs.
+More workers prepare data in parallel; they do not add optimizer updates per
+epoch, and a larger worker count is not automatically faster.
+
+Each notebook experiment resets the random seed, resets the training-loader
+generator, constructs a fresh model, and snapshots its configurations. Runs
+are trained from scratch, not continued from previous weights. At batch size
+64 there are 1,980 training batches per epoch. Results are saved as unique JSON
+files containing model/run settings, dataset identity, parameter count, and
+per-epoch loss, accuracy, and training-plus-validation time.
+
+The final benchmark trains from new weights for 90 epochs under multiple
+instructor-selected seeds, with a two-hour safety limit. Its score averages
+private-evaluation accuracy over the final five epochs and across seeds.
+Our final-five development-validation average is a relevant selection metric,
+but is not the instructor's private score or a multi-seed estimate.
+The trial service allows four submissions, each capped at 15 epochs and
+approximately 30 minutes. One trial result has been reviewed in this chat.
+
+Allowed work: student-written PyTorch architectures and training choices,
+with public method contracts preserved. No pretrained weights, imported
+model-zoo architectures, external datasets, or downloaded weights were used.
+The instructor discourages changing train_model because the service replaces
+it. Final benchmark deliverables are student_code.py and benchmark-config.yaml;
+the report is compiled to report.pdf. Follow the course citation/collaboration
+policy when using this summary and external design references.
+
+2. STARTING POINT AND IMPORTANT CORRECTIONS
+
+Earlier work established that higher tested learning rates, additional blocks,
+and wider later stages improved short-budget accuracy. Four loader workers
+reduced local epoch times substantially relative to zero workers.
+
+The strongest replicated earlier width comparison used 15 epochs and decay
+after epoch 8:
+- Narrow [32,64,128,256]: 56.72% (seed 0), 56.46% (seed 1).
+- Wide [32,64,256,512]: 62.02% (seed 0), 61.66% (seed 1).
+- Two-seed final-accuracy means: 56.59% versus 61.84%.
+- Gains: +5.30 and +5.20 percentage points, respectively.
+
+In the initial uploaded files, checkpoint additions had already been removed
+from train_model and its notebook call. The current loop prints no per-epoch
+progress itself and returns only after training finishes. The notebook then
+saves the JSON and prints the history. Automatic checkpoint/resume support is
+not present in the reviewed version.
+
+The original benchmark-config.yaml still described the initial three-block
+baseline. It must be updated to the chosen final model before submission.
+
+3. COMPLETED EXPERIMENTS REVIEWED IN THIS CHAT
+
+All accuracy values below are development-validation accuracy. Times are sums
+of saved epoch_seconds and include local training plus validation. "Final5"
+means the arithmetic mean over the last five recorded epochs; for 15-epoch
+runs that includes epochs 11-15, which straddle the step-decay transition.
+
+Run     Seed  Epochs  Final acc.  Final5 acc.  Parameters   Time (min)
+run_14    1     15      62.44%      60.288%     1,400,292      24.56
+run_15    1     15      69.72%      67.892%     6,173,156      27.90
+run_16    0     15      70.44%      68.088%     6,173,156      26.71
+run_17    0     15      71.00%      68.540%     6,763,748      28.62
+run_18    0     90      74.64%      74.644%     6,763,748     174.36
+run_19    0     90      76.78%      76.736%     6,763,748     172.68
+
+A. Add a fifth block: run_14 versus run_15
+
+Shared settings: seed 1, 15 epochs, AdamW, LR 0.003, weight decay 0.0001,
+dropout 0, batch size 64, four workers, one LR reduction by factor 0.3 after
+epoch 12 (0.003 to 0.0009, effective for epoch 13).
+run_14 channels: [32,64,256,512].
+run_15 channels: [32,64,256,512,1024].
+Final accuracy improved by 7.28 percentage points, for 3.34 additional minutes.
+run_15 best accuracy: 69.86% at epoch 13.
+Interpretation: adding this particular block helped. It jointly adds depth,
+parameters, and another pooling operation, so it does not isolate depth alone.
+
+B. Repeat the five-block model: run_16
+
+Same configuration as run_15, but seed 0. Final accuracy: 70.44%.
+The two-seed mean final accuracy is 70.08%, with a 0.72-point difference.
+This supports reproducibility of the five-block model around 70% at this
+budget, but two seeds do not establish its full variability. A matched seed-0
+four-block run with decay after epoch 12 was not completed in this chat.
+
+C. Add one convolution without another pooling stage: run_17
+
+Actual saved seed is 0, so compare to run_16, not run_15. The new convolution
+is inserted AFTER the THIRD MaxPool2d, before the original fourth block:
+Conv2d(256,256,kernel_size=3,padding=1), BatchNorm2d(256), ReLU.
+It processes 16 x 16 feature maps and adds no pooling operation.
+The initial suggestion to place it before that pool was revised before the
+implemented experiment, to reduce computation. Do not describe it as being
+before the third pool in the report.
+
+Implementation uses an optional extra_conv constructor argument and a block
+loop numbered with enumerate(channels, start=1). The extra layers are appended
+after pooling when extra_conv is true and block_number == 3.
+Added parameters: 590,592. Total: 6,763,748.
+Final accuracy improved by 0.56 points; final validation loss improved from
+1.1452 to 1.1053. Runtime rose about 7.2%.
+Interpretation: a modest promising improvement, not independently replicated.
+The extra layer initially learned more slowly and caught up later; adding
+depth was not guaranteed to help under a fixed epoch budget.
+
+D. Full-budget training with cosine decay: run_18
+
+Retained the extra-convolution architecture, seed 0, dropout 0, and weight
+decay 0.0001. Changed the training budget to 90 epochs and replaced the one-time
+step reduction with cosine decay from LR 0.003 toward 0.00003 over 90 epochs.
+Final accuracy: 74.64%. Final-five average: 74.644%.
+Best accuracy: 74.84% at epoch 79. Final training accuracy: 87.56%.
+Lowest validation loss: 1.1316 at epoch 33; final validation loss: 1.2361.
+Training loss continued to decline while validation loss generally worsened
+after its minimum. Validation accuracy still rose slowly late in training.
+Interpretation: evidence of increasing overfitting/overconfidence motivated
+regularization. The loss/accuracy pattern is consistent with increasingly
+confident errors, but prediction-level evidence was not collected to prove it.
+Because BOTH duration and schedule changed from run_17, this comparison does
+not isolate the effect of cosine scheduling.
+
+E. Combined regularization: run_19 — CURRENT SELECTED CONFIGURATION
+
+Same architecture, seed, 90-epoch cosine schedule, and data settings as run_18.
+Changed dropout 0.0 -> 0.2 AND AdamW weight decay 0.0001 -> 0.001.
+Final accuracy: 76.78%. Final-five average: 76.736%.
+Best accuracy: 77.00% at epoch 83. Final training accuracy: 82.81%.
+Final validation loss: 0.9978. Lowest validation loss: 0.9762 at epoch 63.
+Gains over run_18: +2.14 points final accuracy; +2.092 points final-five mean.
+Parameter count unchanged; runtime approximately unchanged.
+
+Interpretation: the combined regularization change improved validation
+performance while reducing training accuracy. Validation loss also became
+substantially lower and more stable. We cannot attribute the gain to dropout
+alone or weight decay alone. Dropout is active in training and disabled in
+evaluation, and training uses augmentation; the observed train/validation gap
+is not a controlled measurement of generalization error.
+
+For the comparison figure, replace "Higher dropout model" with something like
+"Dropout 0.2 + weight decay 0.001". Existing comparison_013.png reports FINAL
+accuracy (74.64% versus 76.78%), not final-five means; label any new figure or
+table accordingly.
+
+4. INSTRUCTOR GPU TRIAL
+
+The trial tested the ORIGINAL five-block model WITHOUT the extra convolution,
+confirmed by its 6,173,156 parameters. Do not report it as a trial of run_19.
+Status: completed all 15 epochs. Seed: 0. Batch size: 64.
+Hardware: NVIDIA RTX PRO 4000 Blackwell. Loader workers: 8.
+Final validation accuracy: 70.38%. Final validation loss: 1.1243.
+Total reported elapsed time: 811.7 seconds (13.53 minutes).
+Mean recorded epoch time: 53.83 seconds; recorded epoch sum: 807.4 seconds.
+Local corresponding seed-0 run_16: 70.44%, 1,602.4 seconds.
+
+This supports successful execution of the intended five-block model and close
+agreement in accuracy. Timing reflects the entire instructor setup, including
+its data loading, not an isolated GPU speed comparison. Feedback did not list
+every constructor argument, so it is not a complete configuration audit.
+
+At the measured trial rate, 90 epochs of that tested model extrapolate to about
+80.7 minutes plus overhead. Applying the locally observed extra-convolution
+slowdown gave a rough estimate in the high-80-minute range. These are timing
+projections, not measured 90-epoch instructor runs or guarantees of eligibility.
+The queue took roughly eight hours for the returned trial, so further feedback
+was not relied on for the deadline.
+
+Trial accepts Python files only. The likely route is instructor instantiation
+of CNNClassifier using defaults, but the exact constructor invocation was not
+provided. Notebook MODEL_CONFIG does not automatically transfer to that service.
+
+5. CURRENT ARCHITECTURE, CONFIGURATION, AND CODE STATUS
+
+Architecture for run_19:
+- Conv 3->32, BN, ReLU, MaxPool: spatial size 128->64.
+- Conv 32->64, BN, ReLU, MaxPool: 64->32.
+- Conv 64->256, BN, ReLU, MaxPool: 32->16.
+- Extra Conv 256->256, BN, ReLU: remains 16 x 16.
+- Conv 256->512, BN, ReLU, MaxPool: 16->8.
+- Conv 512->1024, BN, ReLU, MaxPool: 8->4.
+- Adaptive average pool to 1 x 1, flatten, dropout 0.2, linear 1024->100.
+All convolutions are 3 x 3, stride 1, padding 1, with bias as in the code.
+There are six convolutions, six batch-normalization layers, and five max pools.
+The forward method returns logits; loss is ordinary mean cross-entropy.
+No label smoothing, mixup, pretrained model, or residual architecture was added.
+
+Exact run_19 notebook settings:
+
+RUN_CONFIG = {
+    "seed": 0,
+    "batch_size": 64,
+    "image_size": 128,
+    "epochs": 90,
+    "num_workers": 4,
+}
+
+MODEL_CONFIG = {
+    "channels": [32, 64, 256, 512, 1024],
+    "num_classes": 100,
+    "dropout": 0.2,
+    "optimizer_name": "adamw",
+    "learning_rate": 0.003,
+    "weight_decay": 0.001,
+    "lr_decay_epoch": None,
+    "extra_conv": True,
+    "cosine_epochs": 90,
+    "cosine_min_lr": 0.00003,
+}
+
+configure_scheduler now selects CosineAnnealingLR when cosine_epochs is given;
+otherwise it selects the existing MultiStepLR when lr_decay_epoch is given,
+or returns None. train_model calls scheduler.step() after each epoch.
+The notebook's scheduler check now verifies the cosine type, duration, and
+minimum LR. It reloads student_code before constructing models.
+
+The most recent reviewed source was student_code(10).py with notebook(6).ipynb.
+The syntax of the Python file and all notebook code cells was checked.
+The training, evaluation, and loader functions matched the earlier versions.
+PyTorch and pytest were unavailable in the review environment, so this review
+did not execute the unit tests. Subsequent user-run 90-epoch results establish
+successful training, but do not substitute for a fresh final unit-test check.
+
+The reviewed Python defaults still had extra_conv=False, cosine_epochs=None,
+dropout=0, weight_decay=0.0001, and lr_decay_epoch=12. Explicit notebook arguments
+override these, so completed notebook runs are correctly configured. Before
+submission, verify that the final benchmark YAML carries ALL selected options.
+If submitting a Python-only trial, reconcile constructor defaults separately.
+The actual local import filename must be student_code.py.
+
+6. RUN_20 — PENDING
+
+Planned change relative to run_19: weight_decay 0.001 -> 0.003 only.
+Keep dropout 0.2, seed 0, all architecture/data settings, and the full 90-epoch
+cosine schedule unchanged. User reports this run is underway.
+
+Rationale: test whether somewhat stronger AdamW weight shrinkage improves
+generalization further without adding computation or architecture complexity.
+This is a hypothesis, not an assumption of monotonic improvement.
+
+When the JSON arrives:
+1. Verify settings and all 90 completed epochs.
+2. Compute mean(history["validation_accuracy"][-5:]).
+3. Compare against run_19's 0.76736 (76.736%).
+4. Also inspect final/best accuracy, validation loss trajectory, and runtime.
+5. Keep run_19 if run_20 is worse. A tiny gain remains uncertain without another
+   seed; consecutive epochs are not independent trials.
+6. Update the selected configuration, report table, conclusion, and final YAML
+   if the evidence supports switching. Do not silently keep run_20 settings if
+   run_19 remains the selected model.
+
+Short runs were considered but rejected for this final selection question.
+At epoch 15, run_18 scored 68.04% and run_19 scored 67.66%; at epoch 90,
+run_19 won by 2.14 points. This demonstrates that short runs can misrank these
+regularization settings. A compressed cosine schedule is a different protocol,
+while a truncated 90-epoch schedule omits its late refinement phase.
+
+7. HOW TO USE THIS EVIDENCE IN THE REPORT
+
+Possible central argument:
+Early experiments improved feature capacity and optimization speed. Longer
+training exposed a generalization problem that was less apparent at 15 epochs.
+A combined dropout/weight-decay change improved the final-five validation
+average from 74.644% to 76.736% without increasing model size. Run_19 is therefore
+the current selected configuration, pending the final weight-decay experiment.
+
+Choose 3-5 focused comparisons rather than narrating every exploratory run:
+- Earlier replicated width comparison (seeds 0 and 1; 15 epochs).
+- Fourth versus fifth block (run_14 versus run_15; seed 1; 15 epochs).
+- Extra convolution (run_16 versus run_17; seed 0; 15 epochs).
+- Combined regularization (run_18 versus run_19; seed 0; 90 epochs).
+- Optional final weight-decay comparison (run_19 versus run_20) once completed.
+Include the original baseline from the earlier summary and saved results.
+Describe the 15-to-90-epoch/cosine transition as context, not an isolated
+scheduler ablation. Equal epochs are not equal runtime; report both.
+
+Key limitations and claims to avoid:
+- Run_19's 90-epoch result currently has one seed; no claim of statistical
+  significance or guaranteed improvement across instructor seeds is warranted.
+- Multiple experiments reused development-validation data. It is a selection
+  set, not an untouched estimate of private-evaluation performance.
+- The gain from run_18 to run_19 belongs to a bundled regularization change.
+- A lower training/validation gap is not itself the benchmark objective.
+- More layers, more regularization, more workers, or larger learning rates do
+  not guarantee improvements.
+- The 77.00% peak is not the selection metric; use the final-five average.
+- Run_19 is best observed among completed configurations, not a proven optimum.
+- Instructor runtime projections are estimates; the latest architecture and
+  regularization combination has not completed a 90-epoch instructor run.
+
+Before benchmark results, a defensible expectation is that the selected model
+will outperform the modest original baseline, with local development accuracy
+around 76-77% for the tested seed. Do not promise that exact private score.
+
+8. EVIDENCE FILES AND REFERENCES
+
+Local result filenames:
+run_15: experiment_20261025T075844_152216Z_7562e1a1.json
+run_16: experiment_20261025T083545_603697Z_7b6723c7.json
+run_17: experiment_20261025T171411_847366Z_6b15d3d8.json
+run_18: experiment_20261025T202830_246970Z_4495bbaa.json
+run_19: experiment_20261025T233358_631627Z_a87d586f.json
+run_20: no result file reviewed yet.
+
+Instructor feedback:
+autograder_feedback_upload_3ky6e1oi.json
+autograder_feedback_upload_lx31b1t4.csv
+autograder_feedback_upload__rhpmp_s.txt
+
+Plots:
+run_18: experiment_015_loss.png and experiment_015_accuracy.png.
+run_19: experiment_016_loss.png and experiment_016_accuracy.png.
+comparison_013.png: run_18 versus run_19 final accuracy.
+Plot numbering is independent of run numbering. For 90-epoch plots, replace
+every-epoch x-axis ticks with a readable interval such as every 10 epochs.
+
+External sources consulted during discussion (cite where relevant under course
+policy; these support methods, not the empirical results above):
+- Simonyan and Zisserman, Very Deep Convolutional Networks for Large-Scale
+  Image Recognition: https://arxiv.org/abs/1409.1556
+  Motivated discussion of added small convolutions; no architecture code or
+  weights were imported from this source.
+- Srivastava et al., Dropout: A Simple Way to Prevent Neural Networks from
+  Overfitting (2014): https://jmlr.org/papers/v15/srivastava14a.html
+- PyTorch 2.11 CosineAnnealingLR:
+  https://docs.pytorch.org/docs/2.11/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html
+- PyTorch 2.11 AdamW:
+  https://docs.pytorch.org/docs/2.11/generated/torch.optim.AdamW.html
+- PyTorch 2.11 data loading:
+  https://docs.pytorch.org/docs/2.11/data.html
+
+Final preparation still required: select run_19 or run_20 based on completed
+evidence; update and validate final source/configuration; run supplied tests in
+the local environment; finish report and figures; check and compile report.pdf;
+submit the required files without trained weights.

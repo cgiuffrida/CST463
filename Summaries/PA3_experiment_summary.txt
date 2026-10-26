@@ -1,0 +1,73 @@
+PA3 CNN EXPERIMENT SUMMARY
+Status: October 25, 2026
+
+SETUP
+We built a configurable notebook for CNN experiments on the pinned ImageNet-100 dataset. [32, 64, 128] means three convolutional blocks with those output-channel widths.
+Shared settings: 128 x 128 images, batch size 64, AdamW, weight decay 0.0001, dropout 0, supplied augmentation, and no pretrained weights. Seed 0 was used initially; seed 1 is identified below.
+
+EXPERIMENT HISTORY
+Accuracies are final validation accuracy unless marked partial.
+
+1. Initial check: [32,64,128], LR 0.0003, 1 epoch, seed 0.
+   16.82%. Verified GPU training, metrics, and plots.
+2. Baseline: same settings, 5 epochs.
+   24.14%; approximately 315 seconds per epoch.
+3. Increased LR to 0.001; same three-block model, 5 epochs.
+   28.32%; gain of 4.18 percentage points.
+4. Increased data-loader workers from 0 to 4.
+   One-epoch check: 83.3 seconds. Five-epoch repeat: 28.50%.
+   Sustained reduction from approximately 315 to 83 seconds per epoch.
+   Kept four workers afterward. Worker changes can also change augmentation randomness.
+5. Added fourth block: [32,64,128,256], LR 0.001, 5 epochs.
+   37.70%; approximately 83 seconds per epoch.
+6. Increased LR to 0.003; same four-block model, 5 epochs.
+   43.98%; gain of 6.28 percentage points.
+7. Extended same four-block model to 15 epochs at constant LR 0.003.
+   54.82%; temporary validation dips recovered.
+8. Added decay after epoch 8: LR 0.003 to 0.0009, 15 epochs.
+   56.72%; validation loss 1.6885.
+9. Wider four-block model: [32,64,256,512], same schedule, 15 epochs.
+   62.02%; approximately 96 seconds per epoch.
+10. Narrow model repeated with seed 1 (run_11): [32,64,128,256].
+    LR 0.003, decay after epoch 8, 15 epochs: 56.46%.
+    Parameters: 415,076.
+11. Wide model repeated with seed 1 (run_12): [32,64,256,512].
+    Same schedule, 15 epochs: 61.66%. Parameters: 1,400,292.
+12. Wide model, seed 1, extended to 30 epochs (run_13).
+    Same LR and decay after epoch 8.
+    Epoch 15: 61.74%; epoch 30: 64.62%; best: 64.66% at epoch 28.
+    Extra 15 epochs gained 2.88 percentage points within this run and cost about 24 additional minutes. Returned to 15 epochs for routine testing.
+13. Delayed decay until after epoch 12 (run_14).
+    Wide four-block model, seed 1, 15 epochs: 62.44%.
+    Gain of 0.78 percentage points over run_12; not yet replicated.
+14. Added fifth block: [32,64,256,512,1024], seed 1.
+    Planned 15 epochs, LR 0.003, decay after epoch 12.
+    STOPPED AFTER EPOCH 10: 64.20% accuracy, validation loss 1.3590.
+    Approximately 109 seconds per epoch and 6.17 million parameters.
+    Preliminary result only: not a completed 15-epoch comparison, and the scheduled LR decay had not occurred.
+
+MAIN FINDINGS
+- Four workers greatly improved throughput.
+- Higher learning rates improved five-epoch learning in the tested configurations.
+- Additional depth and width improved validation accuracy.
+- Width gains repeated across seeds: +5.30 percentage points for seed 0 and +5.20 for seed 1. Two-seed mean accuracy: 56.59% narrow versus 61.84% wide, both with decay after epoch 8.
+- Decay helped the tested 15-epoch run. Later decay gave a modest, unreplicated improvement.
+- Longer training helped with diminishing returns. Short plateaus did not establish a hard accuracy ceiling.
+- No clear sustained overfitting was established. Training uses augmentation and averages predictions during learning, so its metrics are not directly equivalent to validation metrics.
+- Equal epochs do not mean equal runtime across architectures. Report runtime alongside accuracy.
+
+NOTEBOOK WORK
+Added centralized settings, GPU checks, model-shape checks, dataset checks, and JSON saving/restoration of completed experiments. Added saved plots for loss, accuracy, and final validation accuracy across equal-budget experiments. Incrementing filenames prevent overwriting plots.
+
+Temporarily added progress output and per-epoch checkpoints to train_model. Checkpoints contain weights, optimizer/scheduler state, history, and completed epoch count. Automatic resuming was not implemented.
+
+COURSE RULES AND CURRENT CODE STATUS
+The README explicitly allows model architecture/training-choice changes while preserving public method contracts. The professor's update discourages modifying train_model because the trial service overrides it.
+
+The latest recommended cleanup restores the supplied train_model while retaining CNNClassifier and scheduler improvements. The notebook removes checkpoint arguments and checkpoint-writing setup but keeps completed-result JSON saving and plots. The original loop returns metrics only after all requested epochs finish. Cleanup completion has not yet been verified.
+
+The professor's update specifies a 30-minute trial limit. The README separately describes 15-epoch trials, at most four service uses, and a 90-epoch final benchmark with a two-hour safety limit. Do not assume the trial update changes final-benchmark rules.
+Final benchmark submission uses student_code.py and benchmark-config.yaml. How the Python-only trial service chooses constructor arguments remains unconfirmed.
+
+NEXT STEP
+Verify the cleanup and complete one fresh 15-epoch five-block run with seed 1, LR 0.003, decay after epoch 12, batch size 64, and four workers. Preserve the interrupted run as preliminary evidence; its final outcome is unknown.
