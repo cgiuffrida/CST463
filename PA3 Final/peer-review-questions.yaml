@@ -1,0 +1,91 @@
+# Peer Review Rubric — ML Lab Report Evaluation
+# Each student reviews 3 peer reports. Fill in dates before publishing.
+
+pdfs:
+  - "report.pdf"
+min_reviews_per_submission: 3
+min_reviews_per_student: 1
+reviews_per_student: 3
+points_possible: 1
+published: false
+unlock_at: "TBD"
+due_at: "TBD"
+lock_at: "TBD"
+rubric:
+  name: "PA3 Peer Review"
+  version: 1
+  likert_scale:
+    min: 1
+    max: 4
+    labels:
+      1: "Strongly Disagree / Terrible"
+      2: "Disagree / Weak"
+      3: "Agree / Good"
+      4: "Strongly Agree / Excellent"
+
+  sections:
+    - section: "Quantitative Items"
+      questions:
+        - id: likert_questions_asked
+          type: likert
+          prompt: "The questions this report investigates require the dataset and experiments to answer — they couldn't be answered without running anything."
+        - id: likert_engineering_decisions
+          type: likert
+          prompt: "The author explains why they made specific design choices (hyperparameters, preprocessing), not just what they chose."
+        - id: likert_reproducibility
+          type: likert
+          prompt: "Based on the details given in this report, I am confident I could reproduce this experiment myself."
+        - id: likert_evidence_claim_linkage
+          type: likert
+          prompt: "The claims made in the text are backed up by the plots/results shown — I didn't notice claims without evidence."
+        - id: likert_plot_quality
+          type: likert
+          prompt: "The plots are easy to read (labeled axes, legible, appropriate chart type) and directly support the arguments being made."
+        - id: likert_clarity_of_writing
+          type: likert
+          prompt: "The report is clear and concise — I didn't have to re-read sections to understand what was being said."
+        - id: likert_length_scope
+          type: likert
+          prompt: "Each section stays roughly within the suggested word count and doesn't pad or under-develop the content."
+        - id: likert_authorial_ownership
+          type: likert
+          prompt: "The author seemed genuinely engaged in the decision-making and writing process throughout this report."
+
+    - section: "PA3-Specific Items"
+      questions:
+        - id: likert_controlled_ablation
+          type: likert
+          prompt: "The report compares a baseline and controlled CNN design or optimization changes, rather than presenting only a final model."
+        - id: likert_development_discipline
+          type: likert
+          prompt: "The author uses development-validation evidence to select the final model and does not treat a benchmark score or a single run as the explanation for a result."
+
+    - section: "Comprehension Check"
+      questions:
+        - id: comprehension_summary
+          type: short_response
+          prompt: "In 1-2 sentences, summarize the CNN approach and evidence this report describes, in your own words."
+          visible_to_author: false
+
+    - section: "Qualitative Feedback"
+      questions:
+        - id: freetext_liked
+          type: short_response
+          prompt: "What was particularly well stated or made a convincing argument?"
+          purpose: "validation for the author"
+          visible_to_author: true
+        - id: freetext_confused_fix
+          type: short_response
+          prompt: "Where did you get confused, and what would fix it?"
+          purpose: "actionable feedback, paired complaint + fix"
+          visible_to_author: true
+        - id: freetext_would_write_myself
+          type: short_response
+          prompt: "After reading this report, is there anything in your own report you would change or approach differently?"
+          purpose: "craft-focused self-improvement for the reviewer"
+          visible_to_author: true
+        - id: freetext_next_experiment
+          type: short_response
+          prompt: "What is one next experiment that would build on this report?"
+          purpose: "generative thinking about the dataset, not just the report"
+          visible_to_author: true

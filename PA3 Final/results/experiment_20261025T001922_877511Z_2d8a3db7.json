@@ -1,0 +1,43 @@
+{
+  "name": "run_1",
+  "run_config": {
+    "seed": 0,
+    "batch_size": 64,
+    "image_size": 128,
+    "epochs": 1,
+    "num_workers": 0
+  },
+  "model_config": {
+    "channels": [
+      32,
+      64,
+      128
+    ],
+    "num_classes": 100,
+    "dropout": 0.0,
+    "optimizer_name": "adamw",
+    "learning_rate": 0.0003,
+    "weight_decay": 0.0001
+  },
+  "dataset_repository": "clane9/imagenet-100",
+  "dataset_revision": "0519dc2f402a3a18c6e57f7913db059215eee25b",
+  "device": "cuda",
+  "parameter_count": 106596,
+  "history": {
+    "train_loss": [
+      3.9780170969658992
+    ],
+    "train_accuracy": [
+      0.11188027374120879
+    ],
+    "validation_loss": [
+      3.6465820693969726
+    ],
+    "validation_accuracy": [
+      0.1682
+    ],
+    "epoch_seconds": [
+      316.73408969999946
+    ]
+  }
+}

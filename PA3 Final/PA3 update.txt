@@ -1,0 +1,33 @@
+Hi All, an update on the trial runs.  I have the code set up and have passed back the first few now.  I'm going to enable it to automatically run sometime this evening or tomorrow, and will run it manually until then, but I wanted to add a few notes:
+
+For batch size, my machine caps it to 1024 and defaults to 64.  Even at 1024, if you have a particularly large model you might OOM and that would be a problem, so I'd treat that as a limit to avoid unless your smaller runs indicate it'll work
+I OOM'd the machine at 2048 batch size, and had a margin of about 5% free with 1024, so this really is a limit to stay away from
+a rough estimate would be that a model of 20M parameters should be okay, but staying below that would be good.  
+I have an experiment I want to run that I'll report back on in a little bit that will hopefully give a clearer picture
+
+The files that are returned should be:
+a txt that gives information on whether the run worked or not
+a json that gives details on run configuration
+a csv that reports loss and accuracy
+
+The time limit on each run is set to 30 minutes (the model I was testing on took ~8 minutes so this should be a safe margin).  If a run fails due to timing out it should give data on whatever epochs it has completed.  
+Try not to change the training loop we have (i.e. the train_model function).  I overrode it to enable the ability to report back partial runs
+
+Update to model sizes, batch size of 1024 definitively should work up to 14M parameters, and batch size is definitely the biggest factor in this, so if you use 128 you can probably scale as much as you want (although time limits might affect that)
+
+At batchsize=1024:
+14K parameters: 12.25GB
+14M parameters: 19GB
+
+At batchsize=128
+14K parameters: 1.6GB
+14M parameters: 2.67GB
+
+
+
+Timing is also something to consider, since runs do cut off after 30 minutes.  Typically, for any given model the longest running batch size is 1, likely due to data transfer over head.  The minimum often seemed to occur around batch_size 8 to 64.
+
+It seems like overall batch size 64 is the best mixture of these, so if you don't set a batch size I'm defaulting to using that.
+
+I'm also attaching a graph of this data.  The 1-block is a single VGG block that is 14k parameters, and the 7 block is the 14MB parameters model.
+

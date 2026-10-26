@@ -1,0 +1,17 @@
+# Submit this file with your final student_code.py. The evaluator supplies the
+# pinned full dataset, 90 epochs, private evaluation split, and hidden seeds.
+model:
+  channels: [32, 64, 256, 512, 1024]
+  num_classes: 100
+  dropout: 0.2
+  optimizer_name: adamw
+  learning_rate: 0.003
+  weight_decay: 0.003
+  lr_decay_epoch: null
+  extra_conv: true
+  cosine_epochs: 90
+  cosine_min_lr: 0.00003
+
+# This controls the evaluator's training-loader batch size. It may be reduced
+# by the evaluator if needed to fit the fixed hardware safely.
+batch_size: 64
