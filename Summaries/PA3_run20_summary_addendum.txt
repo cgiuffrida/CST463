@@ -1,0 +1,56 @@
+PA3 RUN 20 — FINAL EXPERIMENT ADDENDUM
+
+Purpose
+Test whether increasing AdamW weight decay from 0.001 to 0.003 improves
+generalization beyond run 19. This was a controlled, single-factor comparison.
+
+Configuration
+All other settings matched run 19: seed 0, 90 epochs, batch size 64, four
+loader workers, 128 x 128 images, channels [32,64,256,512,1024], and the extra
+256->256 convolution after the third pooling operation. Dropout remained 0.2.
+AdamW started at learning rate 0.003, with cosine decay over 90 epochs toward
+0.00003. Both runs used fresh weights and the same pinned ImageNet-100 dataset.
+Parameter count remained 6,763,748.
+
+Results
+Metric                              Run 19          Run 20
+Weight decay                        0.001           0.003
+Final validation accuracy           76.78%          77.02%
+Mean accuracy, epochs 86-90          76.736%         76.828%
+Best validation accuracy            77.00%          77.20%
+Epoch of best accuracy              83              84
+Mean validation loss, epochs 86-90   0.9897          0.9659
+Final validation loss               0.9978          0.9710
+Final training accuracy             82.81%          83.35%
+Training + validation time          172.7 min       173.3 min
+
+Interpretation
+Stronger weight decay improved the final-five validation average by 0.092
+percentage points and final-epoch accuracy by 0.24 points, with lower validation
+loss and essentially unchanged runtime. This was a small improvement, much
+smaller than the earlier combined dropout/weight-decay change from run 18 to
+run 19. It suggests diminishing returns from this particular adjustment; it
+does not establish an accuracy ceiling for the architecture or dataset.
+
+Both configurations were tested at seed 0 only for this 90-epoch comparison.
+The small difference does not demonstrate reliable superiority across seeds.
+The five final epochs are correlated observations, not independent replications.
+
+Final selection
+Select run 20 as the best observed completed configuration: it has the highest
+final-five validation average, lower validation loss than run 19, and no
+material computational penalty. Treat this as a narrow empirical selection,
+not a statistically established advantage or a proven optimal configuration.
+The instructor's private-evaluation accuracy remains unknown.
+
+Updates to the previous summary/report
+- Replace run 20's pending status with the results above.
+- Change the selected model from run 19 to run 20.
+- Retain all run-19 model settings except weight_decay, which becomes 0.003.
+- Use 76.828% when reporting the selected model's final-five development-
+  validation average; distinguish it from 77.02% final accuracy and 77.20% peak.
+- Update benchmark-config.yaml to the complete selected configuration.
+  Notebook settings do not automatically become submission settings.
+
+Evidence file
+experiment_20261026T025713_313527Z_078b621b.json
